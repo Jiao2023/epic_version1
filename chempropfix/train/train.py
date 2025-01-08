@@ -213,10 +213,13 @@ def train(
                 loss = loss.sum() / masks.sum()
             loss_sum += loss.item() # 损失的累加，计算所有批次的损失和
             iter_count += 1
+            # add 
             if loss_sum > 1e10:
                 print("Warning: Extremely large loss detected!")
                 return False
+
             loss.backward()
+            # add
             for name, param in model.named_parameters():
                 if param.grad is not None:
                     if torch.isnan(param.grad).any():
@@ -224,6 +227,7 @@ def train(
                     if torch.isinf(param.grad).any():
                         print(f"Inf gradients in {name}")
                     if (param.grad.abs() > 1e5).any():
+                        pdb.set_trace()
                         print(f"Very large gradients in {name}")
         if args.grad_clip:
             nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
@@ -244,7 +248,6 @@ def train(
             else:
                 # 计算平均损失
                 loss_avg = loss_sum / iter_count
-
                 loss_sum = iter_count = 0
 
             lrs_str = ", ".join(f"lr_{i} = {lr:.4e}" for i, lr in enumerate(lrs))

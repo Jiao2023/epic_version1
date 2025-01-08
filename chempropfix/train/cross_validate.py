@@ -33,7 +33,7 @@ def cross_validate(args: TrainArgs,
     :param train_func: Function which runs training.
     :return: A tuple containing the mean and standard deviation performance across folds.
     """
-    logger = create_logger(name=TRAIN_LOGGER_NAME, save_dir=os.path.join(args.save_dir,str(args.seed)), quiet=args.quiet)
+    logger = create_logger(name=TRAIN_LOGGER_NAME, save_dir=args.save_dir, quiet=args.quiet)
     if logger is not None:
         debug, info = logger.debug, logger.info
     else:
@@ -56,10 +56,10 @@ def cross_validate(args: TrainArgs,
     # Save args
     makedirs(args.save_dir)
     try:
-        args.save(os.path.join(args.save_dir, str(args.seed),'args.json'))
+        args.save(os.path.join(args.save_dir,'args.json'))
     except subprocess.CalledProcessError:
         debug('Could not write the reproducibility section of the arguments to file, thus omitting this section.')
-        args.save(os.path.join(args.save_dir,str(args.seed),'args.json'), with_reproducibility=False)
+        args.save(os.path.join(args.save_dir,'args.json'), with_reproducibility=False)
 
     # set explicit H option and reaction option
     reset_featurization_parameters(logger=logger)
@@ -105,9 +105,6 @@ def cross_validate(args: TrainArgs,
     all_scores = defaultdict(list) 
     for fold_num in range(args.num_folds):
         info(f'Fold {fold_num}')
-        args.seed = init_seed + fold_num
-        args.save_dir = os.path.join(save_dir, f'{args.seed}')
-        makedirs(args.save_dir)
         data.reset_features_and_targets()
         # If resuming experiment, load results from trained models
         test_scores_path = os.path.join(args.save_dir, 'test_scores.json')
@@ -194,7 +191,7 @@ def cross_validate(args: TrainArgs,
 
     # Optionally merge and save test preds
     if args.save_preds:
-        all_preds = pd.concat([pd.read_csv(os.path.join(save_dir, f'{fold_num}', 'test_preds.csv'))
+        all_preds = pd.concat([pd.read_csv(os.path.join(save_dir, 'test_preds.csv'))
                                   for fold_num in range(args.num_folds)])
         all_preds.to_csv(os.path.join(save_dir, 'test_preds.csv'), index=False)
 

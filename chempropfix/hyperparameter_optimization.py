@@ -55,11 +55,8 @@ def hyperopt(args: HyperoptArgs) -> None:
         "hidden_size",
         "linked_hidden_size",
         "warmup_epochs",
-        "attn_enc_num_layers",
-        "num_bessel",
-        "max_ell",
-        "veceij_dim",
-        "leneij_dim"
+        "edge_capacity",
+        "residual_capacity"
     ]
 
     # Load in manual trials

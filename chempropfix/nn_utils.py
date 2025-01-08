@@ -108,8 +108,6 @@ def initialize_weights(model: nn.Module,args) -> None:
     """
     for layer in model.modules():
         if isinstance(layer, nn.Linear):
-            #if hasattr(layer, 'reset_parameters'):
-                #layer.reset_parameters()  # 调用 reset_parameters 方法
             if args.init == "constant":
                 nn.init.constant_(layer.weight,1.)
             elif args.init == "xavier_uniform":
@@ -122,22 +120,9 @@ def initialize_weights(model: nn.Module,args) -> None:
                 nn.init.kaiming_uniform_(layer.weight)
             elif args.init == "kaiming_normal":
                 nn.init.kaiming_normal_(layer.weight)
+                nn.init.constant_(layer.bias,0)
             elif args.init =="glorot":
                 inits.glorot(layer.weight)
-            
-
-'''
-    for name, param in model.named_parameters():
-    # for param in model.parameters():
-        print(f'name:{name},param.shape:{param.shape}')
-        if param.dim() == 1:
-            nn.init.constant_(param, 0)
-        else:
-            nn.init.xavier_normal_(param)
-
-'''
-
-
 
 class NoamLR(_LRScheduler):
     """

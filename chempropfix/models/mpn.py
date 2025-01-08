@@ -54,7 +54,7 @@ from e3nn import o3
 from torch_geometric.nn.inits import glorot, zeros
 
 
-logging.basicConfig(filename="/home/jiaopanyu/4-result/train/model.log", level=logging.DEBUG,
+logging.basicConfig(filename="/data/4-result/model.log", level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 def visual_matrix(matrix,pth,idx,mtype=None,left=None,right=None):
@@ -197,11 +197,12 @@ class POLYGINConv(MessagePassing):
           :math:`(|\mathcal{V}_t|, F_{out})` if bipartite
     """
     def __init__(self,in_channels,out_channels, nn: Callable, eps: float = 0., train_eps: bool = False, node_hidden: Optional[int] = None, edge_hidden: Optional[int] = None,activation:Callable=None,
-                 **kwargs):
+                 edge_capacity=1,residual_capacity=1,**kwargs):
         kwargs.setdefault('aggr', 'add')
         super().__init__(**kwargs)
-        self.edge_mapper = ffn(edge_hidden, edge_hidden,capacity=1,activation=activation)
-        self.residual_mapping = ffn(in_channels+edge_hidden, in_channels,capacity=1,activation=activation)
+        #pdb.set_trace()
+        self.edge_mapper = ffn(edge_hidden, edge_hidden,capacity=edge_capacity,activation=activation)
+        self.residual_mapping = ffn(in_channels+edge_hidden, in_channels,capacity=residual_capacity,activation=activation)
         self.nn = nn
         self.initial_eps = eps
         self.layer_norm = pnn.norm.LayerNorm(in_channels,1e-7,mode='node')
@@ -225,7 +226,6 @@ class POLYGINConv(MessagePassing):
         x_r = x[1]
         if x_r is not None:
             out = out + (1 + self.eps) * x_r
-        # out = self.layer_norm(out)
         out = self.nn(out)
         return out
     
@@ -285,54 +285,6 @@ class POLYGIN(BasicGNN):
         )
         return POLYGINConv(in_channels,out_channels,mlp, **kwargs)
     
-class EpicCoorEgnn(BasicGNN):
-    r"""The Graph Neural Network from the `"How Powerful are Graph Neural
-    Networks?" <https://arxiv.org/abs/1810.00826>`_ paper, using the
-    :class:`~torch_geometric.nn.GINConv` operator for message passing.
-
-    Args:
-        in_channels (int): Size of each input sample.
-        hidden_channels (int): Size of each hidden sample.
-        num_layers (int): Number of message passing layers.
-        out_channels (int, optional): If not set to :obj:`None`, will apply a
-            final linear transformation to convert hidden node embeddings to
-            output size :obj:`out_channels`. (default: :obj:`None`)
-        dropout (float, optional): Dropout probability. (default: :obj:`0.`)
-        act (str or Callable, optional): The non-linear activation function to
-            use. (default: :obj:`"relu"`)
-        act_first (bool, optional): If set to :obj:`True`, activation is
-            applied before normalization. (default: :obj:`False`)
-        act_kwargs (Dict[str, Any], optional): Arguments passed to the
-            respective activation function defined by :obj:`act`.
-            (default: :obj:`None`)
-        norm (str or Callable, optional): The normalization function to
-            use. (default: :obj:`None`)
-        norm_kwargs (Dict[str, Any], optional): Arguments passed to the
-            respective normalization function defined by :obj:`norm`.
-            (default: :obj:`None`)
-        jk (str, optional): The Jumping Knowledge mode. If specified, the model
-            will additionally apply a final linear transformation to transform
-            node embeddings to the expected output feature dimensionality.
-            (:obj:`None`, :obj:`"last"`, :obj:`"cat"`, :obj:`"max"`,
-            :obj:`"lstm"`). (default: :obj:`None`)
-        **kwargs (optional): Additional arguments of
-            :class:`torch_geometric.nn.conv.GINConv`.
-    """
-    supports_edge_weight: Final[bool] = False
-    supports_edge_attr: Final[bool] = True
-    supports_norm_batch: Final[bool]
-
-    def init_conv(self, in_channels: int, out_channels: int,
-                  **kwargs) -> MessagePassing:
-        mlp = MLP(
-            [in_channels,in_channels, out_channels],
-            act=self.act,
-            act_first=self.act_first,
-            norm=self.norm,
-            norm_kwargs=self.norm_kwargs,
-        )
-        return EpicEgnnConv(in_channels,out_channels,mlp, **kwargs)
-
 class MPNEncoder(nn.Module):
     """An :class:`MPNEncoder` is a message passing neural network for encoding a molecule."""
 
@@ -1085,10 +1037,11 @@ class pyG_helper(nn.Module):
         self.mol_graph2data_layer = mol_graph2data(args)
         self.args = args
         self.encoder_type = args.encoder_type
-        if args.encoder_type in ["polygin", "polygin_attn"]:
+        if args.encoder_type in ["polygin"]:
             self.mpn = POLYGIN(in_channels=atom_fdim,hidden_channels=args.hidden_size, \
                                 num_layers=args.depth,dropout=args.gnn_dropout,activation=get_activation_function(args.activation), \
-                                edge_hidden=bond_fdim,node_hidden=args.hidden_size)
+                                edge_hidden=bond_fdim,node_hidden=args.hidden_size, \
+                                edge_capacity=args.edge_capacity,residual_capacity=args.residual_capacity)
     def forward(self,
                 mol_graph: BatchMolGraph,
                 atom_descriptors_batch: List[np.ndarray] = None) -> torch.FloatTensor:
@@ -1100,9 +1053,8 @@ class pyG_helper(nn.Module):
                batch, ptr
         """
         x, edge_index, edge_attr, b2revb_individual, batch, ptr = self.mol_graph2data_layer(mol_graph) 
-        z_table = AtomicNumberTable([1, 6, 7, 8, 9]) 
 
-        if self.args.encoder_type in ["polygin", "polygin_attn", "polygin_pe"]:
+        if self.args.encoder_type in ["polygin"]:
             poly_vec = self.mpn(x=x, edge_index=edge_index, edge_attr=edge_attr, batch=batch)
         else:
             poly_vec = self.mpn(x=x, edge_index=edge_index, edge_attr=edge_attr,batch=batch)

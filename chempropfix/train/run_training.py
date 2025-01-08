@@ -45,11 +45,11 @@ def run_training(args: TrainArgs,
         debug, info = logger.debug, logger.info
     else:
         debug = info = print
-    seed_torch(args.pytorch_seed)
+    # seed_torch(args.seed) # seed:1
     # Set pytorch seed for random initial weights
-    # torch.manual_seed(args.pytorch_seed)
+    torch.manual_seed(args.pytorch_seed)
     # Split data
-    debug(f'Splitting data with seed {args.pytorch_seed}')
+    debug(f'Splitting data with seed {args.seed}')
     if args.separate_test_path:
         test_data = get_data(path=args.separate_test_path,
                              args=args,
@@ -98,7 +98,7 @@ def run_training(args: TrainArgs,
                                                      split_type=args.split_type,
                                                      sizes=args.split_sizes,
                                                      key_molecule_index=args.split_key_molecule,
-                                                     seed=args.pytorch_seed,
+                                                     seed=args.seed,
                                                      num_folds=args.num_folds,
                                                      args=args,
                                                      logger=logger)
@@ -174,7 +174,6 @@ def run_training(args: TrainArgs,
             scaler = None
             atom_bond_scaler = train_data.normalize_atom_bond_targets()
         else:
-            # train_target的归一化处理
             scaler = train_data.normalize_targets() 
             atom_bond_scaler = None
         args.spectra_phase_mask = None
@@ -229,7 +228,7 @@ def run_training(args: TrainArgs,
         num_workers=num_workers,
         class_balance=args.class_balance,
         shuffle=True,
-        seed=args.pytorch_seed
+        seed=args.seed
     )
 
     val_data_loader = MoleculeDataLoader(

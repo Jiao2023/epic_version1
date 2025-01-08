@@ -246,10 +246,12 @@ class CommonArgs(Tap):
 class TrainArgs(CommonArgs):
     """:class:`TrainArgs` includes :class:`CommonArgs` along with additional arguments used for training a Chemprop model."""
     # add
-    graph_cache_path = None
-    encoder_type :Literal["polygin", "epic_coor_mace_mlp"] = "polygin"
+    encoder_type :Literal["polygin"] = "polygin"
     gnn_dropout = 0
     init = 'xavier_normal'
+    edge_capacity = 1
+    residual_capacity = 1
+
     # General arguments
     data_path: str
     """Path to data CSV file."""
@@ -258,7 +260,7 @@ class TrainArgs(CommonArgs):
     Name of the columns containing target values.
     By default, uses all columns except the SMILES column and the :code:`ignore_columns`.
     """
-    ignore_columns: List[str] = ['index']
+    ignore_columns: List[str] = None
     """Name of the columns to ignore when :code:`target_columns` is not provided."""
     dataset_type: Literal['regression', 'classification', 'multiclass', 'spectra']
     """Type of dataset. This determines the default loss function used during training."""
@@ -295,7 +297,7 @@ class TrainArgs(CommonArgs):
     """Directory in which to find cross validation index files."""
     crossval_index_file: str = None
     """Indices of files to use as train/val/test. Overrides :code:`--num_folds` and :code:`--seed`."""
-    seed: int = 1
+    seed: int = 0
     """
     Random seed to use when splitting data into train/val/test sets.
     When :code`num_folds > 1`, the first fold uses this seed and all subsequent folds add 1 to the seed.
@@ -341,13 +343,13 @@ class TrainArgs(CommonArgs):
     # Model arguments
     bias: bool = False
     """Whether to add bias to linear layers."""
-    hidden_size: int = 256
+    hidden_size: int = 300
     """Dimensionality of hidden layers in MPN."""
     depth: int = 3
     """Number of message passing steps."""
     bias_solvent: bool = False
     """Whether to add bias to linear layers for solvent MPN if :code:`reaction_solvent` is True."""
-    hidden_size_solvent: int = 256
+    hidden_size_solvent: int = 300
     """Dimensionality of hidden layers in solvent MPN if :code:`reaction_solvent` is True."""
     depth_solvent: int = 3
     """Number of message passing steps for solvent if :code:`reaction_solvent` is True."""
@@ -1085,14 +1087,14 @@ class HyperoptArgs(TrainArgs):
             "basic", "learning_rate", "linked_hidden_size", "all",
             "activation", "aggregation", "aggregation_norm", "batch_size", "depth",
             "dropout", "ffn_hidden_size", "ffn_num_layers", "final_lr", "hidden_size",
-            "init_lr", "max_lr", "warmup_epochs","attn_enc_num_layers",
-            "num_bessel", "max_ell","veceij_dim","leneij_dim"
+            "init_lr", "max_lr", "warmup_epochs",
+            "edge_capacity","residual_capacity"
         ]
         supported_parameters = [
             "activation", "aggregation", "aggregation_norm", "batch_size", "depth",
             "dropout", "ffn_hidden_size", "ffn_num_layers", "final_lr_ratio", "hidden_size",
-            "init_lr_ratio", "linked_hidden_size", "max_lr", "warmup_epochs","attn_enc_num_layers",
-            "num_bessel", "max_ell","veceij_dim","leneij_dim"
+            "init_lr_ratio", "linked_hidden_size", "max_lr", "warmup_epochs",
+            "edge_capacity","residual_capacity"
         ]
         unsupported_keywords = set(self.search_parameter_keywords) - set(supported_keywords)
         if len(unsupported_keywords) != 0:
